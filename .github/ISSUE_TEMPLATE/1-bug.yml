@@ -1,0 +1,46 @@
+name: Bug
+description: Something in Market Trade is broken.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Market Trade version
+      description: The number in the jar name or the mods list, e.g. 1.0.0.
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Is Market Trade on your client too?
+      options:
+        - "Yes, I use the market screen"
+        - "No, I use the chest screens"
+        - "I run the server"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. List an item for ...
+        2. ...
+  - type: input
+    id: mods
+    attributes:
+      label: Modpack or other mods
+      description: Name the modpack if you use one.
+  - type: textarea
+    id: log
+    attributes:
+      label: Crash report or log
+      description: For a crash, paste a link to the crash report or latest.log (mclo.gs works well).
+      render: text

@@ -1,0 +1,11 @@
+name: Idea
+description: A suggestion for Market Trade.
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What you would like and why it would help your server.
+    validations:
+      required: true
