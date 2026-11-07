@@ -20,9 +20,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class ClientSetup {
-    // K was free in the Holey Digsite pack. Key mappings live in options.txt, not a registry, so this stays client only.
+    // N, because Iris uses K for shaders and FTB Chunks uses M. Key mappings live in options.txt, not a registry, so this stays
+    // client only.
     public static final KeyMapping OPEN_MARKET = new KeyMapping("key.markettrade.open", KeyConflictContext.IN_GAME,
-            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.markettrade");
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "key.categories.markettrade");
 
     private ClientSetup() {
     }
