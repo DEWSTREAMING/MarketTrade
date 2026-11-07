@@ -9,6 +9,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Dewey"
 displayURL="https://github.com/DEWSTREAMING/MarketTrade"
+logoFile="markettrade_logo.png"
 description='''
 A player market for servers. List items, set your price and buy from other players. Works without the mod on the client, and looks better with it.
 '''
