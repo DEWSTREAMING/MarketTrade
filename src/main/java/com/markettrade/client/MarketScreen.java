@@ -757,8 +757,23 @@ public class MarketScreen extends Screen {
         int pages = Math.max(1, (rows.size() + rowsPerPage - 1) / rowsPerPage);
         browsePage = Math.max(0, Math.min(browsePage, pages - 1));
 
-        int priceColW = Math.min(110, (right - left) / 3);
-        int listedW = 44;
+        int start = browsePage * rowsPerPage;
+        int end = Math.min(rows.size(), start + rowsPerPage);
+        int maxPrice = 0;
+        for (int i = start; i < end; i++) {
+            maxPrice = Math.max(maxPrice, font.width(rows.get(i).lowestText()));
+        }
+
+        int rowW = right - left;
+        int minNameW = rowW / 3;
+        int listedW = Math.max(30, font.width(t("col_listed")));
+        int iconSpace = 3 + (theme().iconSlots() ? lay.rowH() - 2 : 18) + 6;
+        int gap = 10;
+        int overhead = iconSpace + 8 + listedW + gap + 6;
+        int maxPriceColW = Math.max(60, rowW - minNameW - overhead);
+        int priceColW = Math.min(maxPriceColW, Math.max(60, maxPrice > 0 ? maxPrice + 6 : 60));
+        int xListedRight = right - 6 - priceColW - gap;
+
         text(g, t("col_item"), left + 4, headY + 2, c(Token.TEXT_DIM));
         String sortLabel = t("sort_label", t("sort_" + sort.key()));
         int sortW = font.width(sortLabel) + 8;
@@ -766,28 +781,25 @@ public class MarketScreen extends Screen {
             sort = sort.next();
             browsePage = 0;
         });
-        textRight(g, t("col_listed"), right - priceColW - 10, headY + 2, c(Token.TEXT_DIM));
+        textRight(g, t("col_listed"), xListedRight, headY + 2, c(Token.TEXT_DIM));
 
         if (!ClientData.summaryReady && ClientData.SUMMARY.isEmpty()) {
             text(g, t("loading"), left + 4, top + 6, c(Token.TEXT_DIM));
         } else if (rows.isEmpty()) {
             text(g, ClientData.SUMMARY.isEmpty() ? t("empty") : t("no_results"), left + 4, top + 6, c(Token.TEXT_DIM));
         }
-        int start = browsePage * rowsPerPage;
-        int end = Math.min(rows.size(), start + rowsPerPage);
         for (int i = start; i < end; i++) {
             SummaryRow row = rows.get(i);
             int y = top + (i - start) * lay.rowStep();
-            int rowW = right - left;
             boolean hover = overlay == Overlay.NONE && over(mx, my, left, y, rowW, lay.rowH());
             rowBackground(g, left, y, rowW, lay.rowH(), hover);
             ItemStack stack = defaultStack(row.itemId());
             int boxW = iconWithSlot(g, stack, left + 3, y, lay.rowH());
             int nameX = left + 3 + boxW + 6;
             String name = row.available() ? plainName(row.itemId()) : row.itemId();
-            int nameMax = right - priceColW - listedW - 14 - nameX;
+            int nameMax = (xListedRight - listedW - 8) - nameX;
             text(g, trim(name, nameMax), nameX, midY(y, lay.rowH()), row.available() ? c(Token.TEXT) : c(Token.TEXT_DIM));
-            textRight(g, String.valueOf(row.listed()), right - priceColW - 10, midY(y, lay.rowH()), c(Token.TEXT));
+            textRight(g, String.valueOf(row.listed()), xListedRight, midY(y, lay.rowH()), c(Token.TEXT));
             textRight(g, trim(row.lowestText(), priceColW), right - 6, midY(y, lay.rowH()), c(Token.PRICE));
             String id = row.itemId();
             addHit(left, y, rowW, lay.rowH(), () -> {
@@ -879,9 +891,13 @@ public class MarketScreen extends Screen {
             String note = page.averageText().isEmpty() ? t("chart_none") : t("chart_note", page.averageText());
             String shown = trim(note, cw - 20 - font.width(t("recent_sales")));
             textRight(g, shown, cx + cw - 6, top + 4, c(Token.CHART_TEXT));
+            long min = Long.MAX_VALUE;
             long max = 0;
             for (long v : page.chart()) {
-                max = Math.max(max, v);
+                if (v >= 0) {
+                    min = Math.min(min, v);
+                    max = Math.max(max, v);
+                }
             }
             int areaX = cx + 6;
             int areaW = cw - 12;
@@ -893,12 +909,16 @@ public class MarketScreen extends Screen {
             int used = barW * n + barGap * (n - 1);
             int bx = areaX + (areaW - used) / 2;
             g.fill(areaX, areaBottom, areaX + areaW, areaBottom + 1, c(Token.CHART_AXIS));
-            for (int i = 0; i < n; i++) {
-                long v = page.chart()[i];
-                if (v >= 0 && max > 0) {
-                    int bh = (int) Math.max(2, (areaBottom - areaTop) * v / max);
-                    g.fill(bx + i * (barW + barGap), areaBottom - bh, bx + i * (barW + barGap) + barW, areaBottom,
-                            c(Token.CHART_BAR));
+            if (max > 0 && min != Long.MAX_VALUE) {
+                long chartBase = min * 80 / 100;
+                long span = Math.max(1, max - chartBase);
+                for (int i = 0; i < n; i++) {
+                    long v = page.chart()[i];
+                    if (v >= 0) {
+                        int bh = (int) Math.max(2, (long) (areaBottom - areaTop) * (v - chartBase) / span);
+                        g.fill(bx + i * (barW + barGap), areaBottom - bh, bx + i * (barW + barGap) + barW, areaBottom,
+                                c(Token.CHART_BAR));
+                    }
                 }
             }
         }
@@ -908,13 +928,29 @@ public class MarketScreen extends Screen {
         int colCount = left + 4;
         int btnW = Math.max(30, font.width(t("report")) + 10);
         int buyW = Math.max(34, Math.max(font.width(t("buy")), Math.max(font.width(t("short")), font.width(t("yours")))) + 10);
-        int priceW = 96;
         int timeW = 40;
+        int countW = font.width(t("col_count"));
+        int xSeller = colCount + countW + 8;
+
+        int maxPrice = 0;
+        if (page != null) {
+            for (MarketViews.ListingRow row : page.rows()) {
+                maxPrice = Math.max(maxPrice, font.width(row.priceText()));
+                if (!row.totalText().isEmpty()) {
+                    maxPrice = Math.max(maxPrice, font.width("(" + row.totalText() + ")"));
+                }
+            }
+        }
+        int rowW = right - left;
+        int minSellerW = rowW / 3;
+        int minPriceW = Math.max(60, font.width(t("col_price")));
+        int desiredPriceW = Math.max(minPriceW, maxPrice > 0 ? maxPrice + 6 : minPriceW);
         int xBuy = right - buyW;
         int xReport = xBuy - 4 - btnW;
+        int maxPriceCap = Math.max(minPriceW, (xReport - timeW - xSeller - 18) - minSellerW);
+        int priceW = Math.min(maxPriceCap, desiredPriceW);
         int xPrice = xReport - 6 - priceW;
         int xTime = xPrice - 6 - timeW;
-        int xSeller = colCount + 26;
         int sellerW = xTime - 6 - xSeller;
         text(g, t("col_count"), colCount, headY, c(Token.TEXT_DIM));
         text(g, t("col_seller"), xSeller, headY, c(Token.TEXT_DIM));
@@ -999,9 +1035,25 @@ public class MarketScreen extends Screen {
         int top = lay.listTop();
         int headY = top - lay.colHeadH();
         int cancelW = font.width(t("cancel_listing")) + 14;
-        int priceW = 110;
         int timeW = 44;
+
+        int maxPrice = 0;
+        if (data != null) {
+            for (MarketViews.ListingRow row : data.rows()) {
+                maxPrice = Math.max(maxPrice, font.width(row.priceText()));
+                if (!row.totalText().isEmpty()) {
+                    maxPrice = Math.max(maxPrice, font.width("(" + row.totalText() + ")"));
+                }
+            }
+        }
+        int rowW = right - left;
+        int minNameW = rowW / 3;
+        int minPriceW = Math.max(60, font.width(t("col_price")));
+        int desiredPriceW = Math.max(minPriceW, maxPrice > 0 ? maxPrice + 6 : minPriceW);
+        int iconSpace = 3 + (theme().iconSlots() ? lay.rowH() - 2 : 18) + 6;
         int xCancel = right - cancelW;
+        int maxPriceCap = Math.max(minPriceW, (xCancel - timeW - left - iconSpace - 22) - minNameW);
+        int priceW = Math.min(maxPriceCap, desiredPriceW);
         int xPrice = xCancel - 8 - priceW;
         int xTime = xPrice - 8 - timeW;
         text(g, t("col_item"), left + 4, headY + 2, c(Token.TEXT_DIM));

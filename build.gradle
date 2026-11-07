@@ -32,6 +32,12 @@ neoForge {
     runs {
         client {
             client()
+            // gradlew runClient -PmenuShots: takes screenshots of the market screens in run-shots, then quits.
+            if (project.hasProperty('menuShots')) {
+                gameDirectory = project.file('run-shots')
+                programArguments.addAll '--width', '1920', '--height', '1080'
+                systemProperty 'markettrade.studio', 'true'
+            }
         }
         server {
             server()

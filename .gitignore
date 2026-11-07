@@ -41,3 +41,4 @@ repo/
 
 __pycache__/
 *.pyc
+run-shots/
